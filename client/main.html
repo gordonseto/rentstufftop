@@ -1,0 +1,580 @@
+<template name="ApplicationLayout">
+<head>
+  <title>Rent stuff</title>
+</head>
+{{> navigation}}
+  {{> yield}}
+</template>
+
+<template name="navigation" class="navigation">
+<div class="navigation_bar">
+  <div class="hometitle">
+    <a href="{{pathFor route='home'}}"><h2>rentstuff</h2></a>
+  </div>
+  <div class="navigation_links">
+    <h5>
+    <a href="{{pathFor route='newPosting'}}" id="lend">+ lend</a>
+    {{#if currentUser}}
+      <a href="{{pathFor route='messenger'}}">Messages</a>
+      <a href="/profile/{{loggedinUser}}">{{loggedinUser}}</a>
+      <a href="#" class="logout">logout</a>
+    {{else}}
+      <a href="{{pathFor route='login'}}">login</a>
+      <a href="{{pathFor route='register'}}">register</a>
+    {{/if}}
+    </h5>
+  </div>
+</div>
+<div class="location_search">
+  <form>
+  <p><span class="glyphicon glyphicon-search" aria-hidden="true"></span><input id="location" type="text" placeholder="city" value="{{city}}"/></p>
+  </form>
+</div>
+</template>
+
+<template name="home">
+<form>
+  <p>Search near <input id="location" type="text" placeholder="city"/></p>
+</form>
+
+</template>
+
+<template name="search">
+<p> {{> filter}} </p>
+</template>
+
+<template name="map">
+<div class="map-container">
+  {{> googleMap name="map" options=mapOptions}}
+</div>
+</template>
+
+<template name="filter">
+<div class="content-left">
+  <form>
+  <p><input type="button" id="filterstoggle" class="filterstoggle" value="filters"></p>
+    <div class="filters-container">
+      <table id="filters_table">
+      <thead>
+      <tr>
+        <th scope="col">categories</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td>snow</td>
+      </tr>
+      <tr>
+        <td>water</td>
+      </tr>
+      <tr>
+        <td>sport</td>
+      </tr>
+      <tr>
+        <td>play</td>
+      </tr>
+      <tr>
+        <td>utility</td>
+      </tr>
+      </tbody>
+      </table>
+    </div>
+  </form>
+  <div>
+    {{#each results}}
+    <div class="posting_container">
+    <a href="{{pathFor route='posting'}}" target="{{pathFor route='posting'}}">
+      <span class="postPreview">
+        <div class="posting_image">
+          <img src="{{postingImages.[0]}}">
+        </div>
+        <div class="posting_preview_title"><div class="custom_bold">{{title}}</div></div>
+        <div class="posting_preview_rate">${{rentalrate}} /day</div>
+        <div class="posting_preview_time">{{timedifference}}</div>
+        {{posting_marker}}
+      </span>
+    </a>
+    </div>
+    {{/each}}
+  </div>
+  <div class="pageNav">
+    <a href="/s/{{city}}">
+      <button>
+        <span hidden="true">&larr;</span> &lt;&lt;
+      </button>
+    </a>   
+    <a href="{{prevPage}}">
+      <button>
+        <span hidden="true">&larr;</span> &lt;
+      </button>
+    </a>
+    {{#each numPage}}
+      <div class="numPage">
+        <a href="/s/{{city}}/{{this}}">
+          <div class="{{currentPage}}">
+            <button>
+              {{this}}
+            </button>
+          </div>
+        </a>
+      </div>
+    {{/each}}
+    <a href="{{nextPage}}">
+      <button>
+        &gt; <span hidden="true">$rarr;</span>
+      </button>  
+    </a>
+    <a href="{{maxPage}}">
+      <button>
+        <span hidden="true">&rarr;</span> &gt;&gt;
+      </button>
+    </a>
+  </div>
+</div>
+<div class="content-right">
+    <div class="map-container">
+      <div class="map_canvas">
+        {{> googleMap name="map" options=mapOptions}}
+      </div>
+    </div>
+</div>
+</template>
+
+<template name="searchbox">
+<p>{{> map}}</p>
+<form>
+  <input type="text" id="search-box">
+</form>
+{{#if getPostings}}
+{{#each getPostings}}
+    <a href="{{pathFor route='posting'}}">
+    <span class="postPreview">
+    <p><img src="{{postingImages.[0]}}"></p>
+    <p>{{{title}}}</p>
+    <p>Location: {{{location}}}</p>
+    <p>{{{rentalrate}}} /day</p>
+    <p>Posted {{{timedifference}}}</p>
+    </span>
+    </a>
+{{/each}}
+{{else}}
+{{> displayPostings}}
+{{/if}}
+</template>
+
+<template name="messenger">
+<div class="messenger">
+<div class="tabs">
+  <ul class="tab-links">
+    <li class="active"><a href="#borrow">Borrow</a></li>
+    <li><a href="#lend">Lend</a></li>
+  </ul>
+</div> 
+<br>
+<div class="tab-content">
+  <span id="borrow" class="tab active">
+    {{#each borrow_conversations}}
+    <div class="conversation_preview {{unread}}" name="{{_id}}">
+        <div class="message_time">
+          {{short_messageTime}}
+        </div>
+        {{#with posting}}
+          <div class="conversation_title">
+            <a href="/posting/{{_id}}"><div class="custom_bold">{{title}}</div></a>
+          </div>
+          <div class="conversation_preview_details">
+            <div class="conversation_image">
+              <a href="/posting/{{_id}}">
+                <img src="{{postingImages.[0]}}">
+              </a>
+            </div>
+          </div>
+        {{/with}}
+        {{#with conversation_preview}}
+          <div class="preview_author">
+            <a href="/profile/{{from}}"><div class="custom_bold">{{from}}</div></a>
+          </div>
+          <div class="conversation_preview_details">
+            <div class="preview_message">
+              {{message}}
+            </div>
+          </div>
+        {{/with}}
+    </div>
+      {{> conversation}}
+    {{/each}}
+  </span>
+  <span id="lend" class="tab">
+    {{#each lend_conversations}}
+    <div class="conversation_preview {{unread}}" name="{{_id}}">
+        <div class="message_time">
+          {{short_messageTime}}
+        </div>
+        {{#with posting}}
+          <div class="conversation_title">
+            <a href="/posting/{{_id}}"><div class="custom_bold">{{title}}</div></a>
+          </div>
+          <div class="conversation_preview_details">
+            <div class="conversation_image">
+              <a href="/posting/{{_id}}">
+                <img src="{{postingImages.[0]}}">
+              </a>
+            </div>
+          </div>
+        {{/with}}
+        {{#with conversation_preview}}
+          <div class="preview_author">
+            <a href="/profile/{{from}}"><div class="custom_bold">{{from}}</div></a>
+          </div>        
+          <div class="conversation_preview_details">
+            <div class="preview_message">
+              {{message}}
+            </div>
+          </div>
+        {{/with}}
+    </div>
+      {{> conversation}}
+    {{/each}}
+  </span>
+</div>
+</div>
+</template>
+
+<template name="conversation">
+  <div class="conversation_container" id="{{_id}}">
+    {{#each messages}}
+      <div class="message">
+      {{#if sent}}
+        <div class="sent_message">
+          <div class="message_time">
+            {{short_messageTime}}
+          </div>
+          <a href="/profile/{{currentUser}}"><div class="custom_bold">me</div></a>
+          <br>
+          <p>{{message}}</p>
+        </div>
+      {{else}}
+        <div class="received_message">
+          <div class="message_time">
+            {{short_messageTime}}
+          </div>
+          <a href="/profile/{{from}}"><div class="custom_bold">{{from}}</div></a>
+          <br>
+          <p>{{message}}</p>
+        </div>
+      {{/if}}
+      </div>
+    {{/each}}
+    <textarea class="message" placeholder="Reply" id="{{_id}}message"></textarea>
+    <p>
+      <button class="send_message">Reply</button>
+    </p>
+  </div>
+</template>
+
+<template name="imageupload">
+  <form id="postingimages">
+    <input type="file" accept="image/*" id="upload1">
+    <input type="file" accept="image/*" id="upload2">
+    <input type="file" accept="image/*" id="upload3">
+    <input type="file" accept="image/*" id="upload4">
+    <input type="file" accept="image/*" id="upload5">
+    <input type="file" accept="image/*" id="upload6">
+    <div id="image_container"></div>
+  </form>
+</template>
+
+<template name="displayPostings">
+  {{#each posting}}
+    <a href="{{pathFor route='posting'}}">
+    <span class="postPreview">
+    <p><img src="{{postingImages.[0]}}"></p>
+    <p>{{title}}</p>
+    <p>Location: {{location}}</p>
+    <p>{{rentalrate}} /day</p>
+    <p>Posted {{timedifference}}</p>
+    </span>
+    </a>
+  {{/each}}
+</template>
+
+<template name="newPosting">
+<div class="new_posting_container">
+  <form>
+  <p><input type="text" name="title" placeholder="Title (Required)" required></p>
+  <p><textarea id="new_posting_description" name="description" placeholder="Description (Optional)"></textarea></p>
+  <br>
+  {{#with rentstuff_user}}
+  <p>
+    <span class="postalcode">
+        <input type="text" id="postalcode" name="postalcode" placeholder="Postal Code (Required)" value="{{postalcode}}" required>
+    </span>
+    <p>Your Postal code is required to help others find your ad.</p>
+    <span class="phonenumber">
+        <input type="text" id="phonenumber" name="phonenumber" placeholder="Phone Number (Optional)" value="{{phonenumber}}">
+    </span>
+    <p>This phone number will be displayed on your ad.</p>
+  </p>
+  <p>
+    <input type="text" name="address" placeholder="Street Address (Optional)" value="{{address}}">
+  </p>
+  <p>This address will be displayed on your ad.</p>
+  {{/with}}
+  <p>
+    $ <span class="rentalrate"><input type="text" name="rentalrate" placeholder="(Required)" required></span> /day
+    <span class="save_details">
+      <input type="checkbox" id="save_details" checked="true"> Save Location Details to Account
+    </span>
+  </p>
+  <br>
+  <p>
+    Category:
+    <span class="category-select">
+      <input type="radio" name="category-select" value="snow" required> SNOW   <input type="radio" name="category-select" value="water" required> WATER   <input type="radio" name="category-select" value="sport" required> SPORT   <input type="radio" name="category-select" value="play" required> PLAY    <input type="radio" name="category-select" value="utility" required> UTILITY
+    </span>
+  </p>
+  <br>
+  <p>
+  <div class="new-posting-datepicker">
+    <div id="new-posting-datepicker"></div>
+  </div>
+  <div class="disabled-dates">
+  <div class="custom_bold">Disabled Dates:</div>
+      <p><input type="checkbox" id="all-dates" value="0"> All Sundays</p>
+      <p><input type="checkbox" id="1" value="1"> All Mondays</p>
+      <p><input type="checkbox" id="2" value="2"> All Tuesdays</p>
+      <p><input type="checkbox" id="3" value="3"> All Wednesdays</p>
+  </div>
+  <br>
+  <div class="disabled-dates">
+      <p><input type="checkbox" id="3" value="4"> All Thursdays</p>
+      <p><input type="checkbox" id="3" value="5"> All Fridays</p>
+      <p><input type="checkbox" id="3" value="6"> All Saturdays</p>
+  </div>
+  </p>
+  <br>
+  <div class="image_upload">
+    <p>{{> imageupload}}</p>
+  </div>
+  <div class="new_posting_submit">
+    <input type="submit" value="Post">
+  </div>
+  </form>
+</div>
+</template>
+
+<template name="posting_map">
+<div class="posting-map-container">
+  {{> googleMap name="map" options=mapOptions}}
+</div>
+</template>
+
+<template name="posting">
+<div class="posting_content_left">
+  <p> {{#each postingImages}}
+          <p><img src="{{this}}"></p>
+      {{/each}}
+  </p>
+</div>
+<div class="posting_content_right">
+  <a href="{{pathFor route='posting'}}">
+    <h2>{{title}}</h2>
+  </a>
+  <div class="posting_title">Description</div>
+  <p> {{description}}</p>
+  <p><h3><div class="custom_bold">${{rentalrate}} /day</div></h3></p>
+  <br><br><br><br>
+  <p><em>Posted {{timedifference}}</em></p>
+  <p><div class="custom_bold">Category</div> {{category}}</p>
+  <p>Posted by: <a href="{{pathFor route='profile'}}">{{createdBy}}</a></p>
+  <p><button id="contact_lender">Contact Lender</button></p>
+  <div id="Modal" class="modal">
+    <div class="modal-content">
+      <span class="close">x</span>
+      <div class="custom_bold">Re: {{title}}</div>
+      <textarea class="message" placeholder="Send a Message"></textarea>
+      <button class="message_send">Send</button>
+    </div>
+  </div>
+  <div class="calendar_container">
+    {{> calendar}}
+  </div>
+  {{#if geocode_address}}
+  {{> posting_map}}
+  {{/if}}
+  <br><br>
+  {{#if posting_is_saved}}
+    <p><a class="posting-saved">Posting Saved</a></p>
+  {{else}}  
+    <p><a class="save-posting">+ Save Posting</a></p>
+  {{/if}}
+  {{#if isOwner}}
+    <p><a href="{{pathFor route='edit'}}">Edit Posting</a></p>
+    <p><a class='bump'>Bump Posting</a></p>
+  {{/if}}
+</div>
+</template>
+
+<template name="edit">
+  <form>
+  <p>Title: <input type="text" name="title" value="{{title}}" required></p>
+  <p>Description: <input type="text" name="description" value="{{description}}"></p>
+  <p>Location: <input type="text" name="location" value="{{location}}" required></p>
+  <p>Address: <input type="text" name="address" value="{{address}}"></p>
+  <p>Rental rate: <input type="text" name="rentalrate" value="{{rentalrate}}" required> /day</p>
+  <div class="category-select">
+    Category: <input type="radio" name="category-select" value="snow" required> SNOW   <input type="radio" name="category-select" value="water" required> WATER   <input type="radio" name="category-select" value="sport" required> SPORT   <input type="radio" name="category-select" value="play" required> PLAY    <input type="radio" name="category-select" value="utility" required> UTILITY
+    {{checkCategory}}
+  </div>
+  <p> {{#each postingImages}}
+          <p><img src="{{this}}"><a href='#' class="delete-image">[delete]</a></p>
+      {{/each}}</p>
+  <p>{{> imageupload}}</p>
+    <input type="submit" value="Save">
+  </form>
+</template>
+
+<template name="calendar">
+  <form id="book-date">
+    <div class="form-group">
+      <div id="datepicker"></div>
+    </div>
+    <div class="form-group">
+        <button id="book-button">Book</button>
+    </div>
+  </form>
+{{blockDates}}
+</template>
+
+<template name="confirm">
+<p>You have selected to rent <strong>{{#with posting}}<a href="{{pathFor route='posting'}}">{{title}}</a>{{/with}}</strong> for {{daysBooked}}.</p>
+<form>
+    <div class="col-xs-4">
+      <div class="form-group">
+        <button class="btn btn-success btn-block">Confirm Booking</button>
+      </div>
+  </div>
+</form>
+</template>
+
+<template name="profile">
+<p><h1>{{username}}:</h1></p>
+{{#if isOwner}}
+  {{> profile_loans}}
+  {{> profile_bookings}}
+{{/if}}
+<p><h2>{{#if isOwner}}My {{/if}}Postings:</h2></p>
+<div class="row">
+  {{#each posting}}
+    <a href="{{pathFor route='posting'}}">
+    <span class="postPreview">
+    <p><img src="{{postingImages.[0]}}"></p>
+    <p>{{title}}</p>
+    <p>Location: {{location}}</p>
+    <p>{{rentalrate}} /day</p>
+    <p>Posted {{timedifference}}</p>
+    </span>
+    </a>
+  {{/each}}
+</div>
+{{#if isOwner}}
+{{> profile_saved_postings}}
+{{/if}}
+</template>
+
+<template name="profile_loans">
+{{#if loans}}
+  <h2>My upcoming loans:</h2>
+  {{#each loans}}
+    {{#if check_loan_date}}
+      <div class='row'>
+      <div class='col-xs-3'>
+      <p>{{loans_preview_days}}:</p>
+      <a href="/profile/{{username}}">{{username}}</a> renting
+      {{#with loans_preview}}
+      <a href="{{pathFor route='posting'}}">
+        <span class="postPreview">
+          <p><img src="{{postingImages.[0]}}"></p>
+          <p>{{title}}</p>
+          <p>Location: {{location}}</p>
+          <p>{{rentalrate}} /day</p>
+          <p>Posted {{timedifference}}</p>
+        </span>
+      </a>
+      {{/with}}
+      </div>
+      </div>
+    {{/if}}
+  {{/each}}
+{{/if}}
+</template>
+
+<template name="profile_bookings">
+{{#if bookings}}
+<h2>My recent bookings:</h2>
+{{#each bookings}}
+<div class='row'>
+<div class='col-xs-3'>
+  {{bookings_preview_days}}:
+  {{#with bookings_preview}}
+      <a href="{{pathFor route='posting'}}">
+        <span class="postPreview">
+          <p><img src="{{postingImages.[0]}}"></p>
+          <p>{{title}}</p>
+          <p>Location: {{location}}</p>
+          <p>{{rentalrate}} /day</p>
+          <p>Posted {{timedifference}}</p>
+        </span>
+      </a>
+  {{/with}}
+</div>
+</div>
+{{/each}}
+{{/if}}
+</template>
+
+<template name ="profile_saved_postings">
+{{#if saved_postings}}
+<p><h2>Saved postings:</h2></p>
+<div class="row">
+{{#each saved_postings}}
+    {{#with saved_postings_preview}}
+      <a href="{{pathFor route='posting'}}">
+        <span class="postPreview">
+          <p><img src="{{postingImages.[0]}}"></p>
+          <p>{{title}}</p>
+          <p>Location: {{location}}</p>
+          <p>{{rentalrate}} /day</p>
+          <p>Posted {{timedifference}}</p>
+        </span>
+      </a>
+    {{/with}}
+  {{/each}}
+</div>
+{{/if}}
+</template>
+
+<template name="register">
+  <h2>Register</h2>
+  <form class="register">
+  <p>Email: <input type="email" name="email" required></p>
+  <p>Username: <input type="username" name="username" required></p>
+  <p>Password: <input type="password" name="password" required></p>
+  <p><input type="submit" value="Register"></p>
+  </form>
+</template>
+
+<template name="login">
+{{checkIfLoggedIn}}
+  <h2>Login</h2>
+  <p>If you don't have an account we will create one for you automatically.</p>
+  <form class="login">
+    <p>Email: <input type="email" name="email" required></p>
+    <p>Password: <input type="password" name="password" required></p>
+    <p><input type="submit" value="Login"></p>
+  </form>
+</template>
+
+<template name="success">
+  <p><h2>Booking successful!</h2></p>
+</template>
