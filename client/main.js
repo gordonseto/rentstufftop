@@ -24,6 +24,15 @@ Conversations = new Mongo.Collection('conversations');
 //Client-Only Collection
 Temporary_Markers = new Mongo.Collection(null);
 
+//subscribe to Postings
+Meteor.subscribe('thePostings');
+//subscribe to Rentstuff_users
+Meteor.subscribe('theUsers');
+//subscribe to Messages
+Meteor.subscribe('theMessages');
+//subscribe to Conversations
+Meteor.subscribe('theConversations');
+
 const recordsPerPage = 12;
 
 //Search box
@@ -680,97 +689,44 @@ var doLoop = false;
 			}
 			else {
 				postingId = this._id;
-				//get meteor username
-				meteorusername = Meteor.user().username;
-				//meteor username is same as Rentstuff_Users username
-				currentUser = Rentstuff_Users.findOne({username: meteorusername});
-				//get current saved postings array from user profile
-				current_saved_postings = currentUser.saved_postings;
-				//check if posting has already been saved
-				var check = current_saved_postings.indexOf(postingId);
-				if(check != -1){
-					return;
-				} else{			
-				//else push this posting id onto array
-				current_saved_postings.push(this._id);
-				//save new array into rentstuff_users profile
-				Rentstuff_Users.update({_id: currentUser._id}, 
-					{$set:{'saved_postings': current_saved_postings}});
-				}
+				Meteor.call('savePosting', postingId);
 			}
 		},
 		'click .posting-saved': function(){
 			postingId = this._id;
-			//get meteor username
-			meteorusername = Meteor.user().username;
-			//meteor username is same as Rentstuff_Users username
-			currentUser = Rentstuff_Users.findOne({username: meteorusername});
-			//get current saved postings array from user profile
-			current_saved_postings = currentUser.saved_postings;
-			//find index of posting in array
-			var index = current_saved_postings.indexOf(postingId);
-			if(index == -1){
-				return;
-			} else{			
-			//delete this posting id from array
-			current_saved_postings.splice(index, 1);
-			//save new array into rentstuff_users profile
-			Rentstuff_Users.update({_id: currentUser._id}, 
-				{$set:{'saved_postings': current_saved_postings}});
-			}
+			Meteor.call('unsavePosting', postingId);
 		},
 		'click .bump': function(){
-			createdAt = new Date();
-			Postings.update({_id: this._id}, {$set: {createdAt: createdAt}});
+			postingId = this._id;
+			Meteor.call('bumpPosting', postingId);
 		},
 		'click #contact_lender': function(){
-			var modal = document.getElementById('Modal');
-			modal.style.display = "block";
+			if(Meteor.user()){
+				var modal = document.getElementById('Modal');
+				modal.style.display = "block";
+			}
+			else{
+				Router.go('/login');
+			}
 		},
 		'click .close': function(){
 			var modal = document.getElementById('Modal');
 			modal.style.display = "none";
 		},
 		'click .message_send': function(event){
-			//get current user's username
-			var currentUser = Meteor.user().username;
 			var postingOwner = this.createdBy;
 			var text_area = $('textarea.message');
 			var message = text_area.val();
-			var currentTime = new Date();
 			var postingId = this._id;
 
-			conversationId = Conversations.insert(
-								{
-								lender: postingOwner,
-								asker: currentUser,
-								postingId: postingId,
-								messageTime: currentTime
-								});
-
-			Messages.insert({conversationId: conversationId,
-							from: currentUser,
-							message: message,
-							messageTime: currentTime
-							});
-			//get messaged user's account
-			rentstuff_user = Rentstuff_Users.findOne({username: postingOwner});
-			//get user's current unread array
-			unreadArray = rentstuff_user.unread;
-			if(unreadArray){
-				unreadArray.push(conversationId);
-			}
-			else{
-				unreadArray = [conversationId];
-			}
-			//update user's account
-			Rentstuff_Users.update({_id: rentstuff_user._id},
-								{$set: {unread: unreadArray}});
+			//postingMessageSend method
+			Meteor.call('postingMessageSend', postingId, postingOwner,
+											message);	
 			//remove text
 			text_area.val("");
 			//change placeholder
 			text_area.attr("placeholder", "Message Sent!");
-			console.log(event);
+			//disable send button
 			event.currentTarget.disabled = "true";
 			setTimeout(function(){
 				//after 1 second, close modal
@@ -780,7 +736,7 @@ var doLoop = false;
 				text_area.attr("placeholder", "Message Sent!");
 				//enable button	
 				$('button.message_send').prop("disabled", false);	
-			}, 1000);			
+			}, 1000);	
 		}
 	});
 
@@ -826,6 +782,13 @@ var doLoop = false;
     			icon: GREEN_MARKER
     		});
   		});
+	});
+
+	Template.messenger.onCreated(function(){
+		//subscribe to theMessages when template is created
+		this.autorun(function(){
+			Meteor.subscribe('theMessages');
+		});
 	});
 
 	Template.messenger.helpers({
@@ -909,30 +872,10 @@ var doLoop = false;
 			//toggle conversation display
 			conversation_container = $('#'+conversationId);
 			conversation_container.slideToggle(250);
-			//get user
-			if(Meteor.user()){
-				currentUser = Meteor.user().username;
-				//get conversation
-				conversation = Conversations.findOne({_id: conversationId});
-				//update unread array
-				rentstuff_user = Rentstuff_Users.findOne({username: currentUser});
-				unreadArray = rentstuff_user.unread;
 
-				if(unreadArray){
-					//get index of conversationId
-					conversationIndex = unreadArray.indexOf(conversationId);
-					if(conversationIndex != -1){
-						//if it is not -1, it is in the array, remove
-						unreadArray.splice(conversationIndex, 1);
-					}
-				} else{
-					unreadArray = [];
-				}
-				//update collection
-				Rentstuff_Users.update({_id: rentstuff_user._id},
-									{$set: {unread: unreadArray}});					
+			//call markAsRead method
+			Meteor.call('markAsRead', conversationId);
 
-			}
 			//scroll to bottom of chat
 			conversation_container.scrollTop(conversation_container.prop("scrollHeight"));
 		}
@@ -951,39 +894,6 @@ var doLoop = false;
 	});
 
 	Template.conversation.helpers({
-		checkUser: function(){
-			//get user
-			if(Meteor.user()){
-				currentUser = Meteor.user().username;
-				//get conversation
-				conversationId = Session.get('showConversation');
-				conversation = Conversations.findOne({_id: conversationId});
-				//check if user is a participant in conversation
-				if(conversation.asker == currentUser || conversation.lender == currentUser){
-					//update unread array first
-					rentstuff_user = Rentstuff_Users.findOne({username: currentUser});
-					unreadArray = rentstuff_user.unread;
-
-					if(unreadArray){
-						//get index of conversationId
-						conversationIndex = unreadArray.indexOf(conversationId);
-						if(conversationIndex != -1){
-							//if it is not -1, it is in the array, remove
-							unreadArray.splice(conversationIndex, 1);
-						}
-					} else{
-						uneadArray = [];
-					}
-					//update collection
-					Rentstuff_Users.update({_id: rentstuff_user._id},
-										{$set: {unread: unreadArray}});					
-
-					return true;
-				}
-			}
-			return false;
-
-		},
 		messages: function(){
 			var conversationId = this._id;
 			return Messages.find({conversationId: conversationId},
@@ -1064,43 +974,12 @@ function getMessageTime(messageDate){
 		'click .send_message': function(event){
 			event.preventDefault();
 			if(Meteor.user()){
-				var currentUser = Meteor.user().username;
 				var conversationId = event.currentTarget.parentElement.parentElement.id;			
 				var message = $('textarea.message#'+conversationId+'message').val();				
-				var currentTime = new Date();
-				Messages.insert({conversationId: conversationId,
-							from: currentUser,
-							message: message,
-							messageTime: currentTime
-							});
-				$('textarea.message').val("");
-				//get conversation
-				var conversation = Conversations.findOne({_id: conversationId});
-				Conversations.update({_id: conversation._id}, 
-									{$set: {messageTime: currentTime}
-									});
-				//get which was participant was messaged
-				if(conversation.asker == currentUser){
-					messaged = conversation.lender;
-				} else{
-					messaged = conversation.asker;
-				}
-				//get messaged user's account
-				rentstuff_user = Rentstuff_Users.findOne({username: messaged});
-				//get user's current unread array
-				unreadArray = rentstuff_user.unread;
-				if(unreadArray){
-					if(unreadArray.indexOf(conversationId) == -1){
-					//if conversationId is not already on the array, push
-					unreadArray.push(conversationId);
-					}
-				}
-				else{
-					unreadArray = [conversationId];
-				}
-				//update user's account
-				Rentstuff_Users.update({_id: rentstuff_user._id},
-									{$set: {unread: unreadArray}});
+
+				Meteor.call('sendMessage', conversationId, message);
+
+				$('textarea.message').val("");				
 			}
 		}
 	});
@@ -1127,100 +1006,16 @@ function getMessageTime(messageDate){
 			Rentstuff_users "bookings" array is updated
 			*/
 			event.preventDefault();
-			//get current user
-			currentUsername = Meteor.user().username;
-			console.log(currentUsername);
-			console.log(this.postingId);
 			//get posting id
 			postingId = this.postingId;
 			//get added days from session "daysBooked" set in posting events
 			addedDays = Session.get("daysBooked");
-			console.log(addedDays);
-			if(addedDays){
-				//find posting from db 
-				posting = Postings.findOne({_id: postingId});
-				console.log(posting);
-				console.log(posting.daysBooked);
-				console.log(posting.daysBooked.postingBookings);
-				//Update account loaning
-				//meteor username is same as rentstuff username
-				postingOwner = posting.createdBy;
-				console.log(postingOwner);
-				postingOwner = Rentstuff_Users.findOne({username: postingOwner});
-				console.log(postingOwner);
-				//get current loans array
-				loansArray = postingOwner.loans;
-				console.log(loansArray);
-				//loop through number of days booked
-				numsDaysBooked = addedDays.length;
-				for(i = 0; i<numDaysBooked; i++){
-					//make new object "newBooking" with username and addedDays
-					newBooking = {postingId: postingId, username: currentUsername, booked: addedDays[i]};
-					//push newBooking onto previous saved array
-					posting.daysBooked.postingBookings.push(newBooking);	
-					newBookingsArray = posting.daysBooked.postingBookings;
-					//insert newBooking into posting owner's loansArray
-					loansArray = insert(newBooking, loansArray);
-					console.log(loansArray);
-				}	//update postingBookings in the database
-				Postings.update({_id: postingId}, {$set:{daysBooked: {postingBookings: newBookingsArray}}});
-				//update posting owner's loans array
-				console.log(postingOwner._id);
-				Rentstuff_Users.update({_id: postingOwner._id}, {$set:{loans: loansArray}})
-				//Update account booking
-				//meteor username is same as Rentstuff_Users username
-				currentUser = Rentstuff_Users.findOne({username: currentUsername});
-				console.log(currentUser);
-				//get current bookings from user profile
-				current_bookings = currentUser.bookings;
-				console.log(current_bookings);
-				//create object to add to array
-				var bookingObj = {postingId: postingId, 
-									days: addedDays}
-				console.log(bookingObj);
-				//check if posting has already been saved
-				var check = current_bookings.indexOf(bookingObj);
-				if(check != -1){
-					return;
-				} else{			
-				//else push this bookingObj onto array
-				current_bookings.push(bookingObj);
-				console.log(current_bookings);
-				//save new array into rentstuff_users profile
-				Rentstuff_Users.update({_id: currentUser._id}, 
-				{$set:{bookings: current_bookings}});
-				}	
-				Router.go('success');
-			}
+
+			Meteor.call('confirmBooking', postingId, addedDays);
+		
+			Router.go('success');
 		}
 	});
-
-
-/*Insert Function for profile loanings*/
-function insert(element, array){
-	array.splice(locationOf(element,array) + 1, 0, element);
-	return array;
-}
-
-/*Quicksort Function for profile loanings*/
-function locationOf(element, array, start, end){
-	if(array.length === 0)
-	return -1;
-
-	start = start || 0;
-	end = end || array.length;
-	var pivot = parseInt(start + (end-start) / 2, 10);
-	if(new Date(array[pivot].booked).getTime() === new Date(element.booked).getTime())
-		return pivot;
-	if(end-start <=1) 
-		return new Date(array[pivot].booked).getTime() > new Date(element.booked).getTime() ? pivot - 1 : pivot;
-	if(new Date(array[pivot].booked).getTime() < new Date(element.booked).getTime()){
-		return locationOf(element,	array,	pivot,	end);
-	}else{
-		return locationOf(element, array, start, pivot);
-	}
-}
-
 
 	Template.profile.helpers({
 		'posting': function(){
@@ -1350,14 +1145,7 @@ var weekDaysDisabled = [];
 	Template.newPosting.events({
 		'submit form': function(){
 			event.preventDefault();
-			console.log('hi');
-			//get current user's id
-			var currentUser = Meteor.userId();
-			user = Meteor.users.findOne({_id: currentUser});
-			if (user){
-				//get user's username
-				var currentUsername = user.username;
-			}
+
 			//get posting information from the DOM
 			var title = $('[name="title"]').val();
 			var description = $('textarea#new_posting_description').val();
@@ -1366,81 +1154,38 @@ var weekDaysDisabled = [];
 			var street_address = $('[name="address"]').val();
 			var rentalrate = $('[name="rentalrate"]').val();
 			var category = Session.get('categorySelect');
-			var postingImages = [];
-			
+			var postingImages = [];		
+			var checked = false;
+
+			if(document.getElementById('save_details').checked){
+				checked = true;
+			}
 
 			cloudinaryUpload(function(imageArray){
 				//upload images to cloudinary with callback
 				
 				postingImages = imageArray;
 				var bookingsArray = [];
-				//check if "save details" checkbox is checked
-				if(document.getElementById('save_details').checked){
-				rentstuff_user = Rentstuff_Users.findOne({username: currentUsername});
-					Rentstuff_Users.update({_id: rentstuff_user._id},
-											{$set: {postalcode: postalcode,
-												phonenumber: phonenumber,
-												address: street_address}});
-				}
+
 				var address;
 
 				if(street_address.length == 0){
-				address = postalcode;
+					address = postalcode;
 				} else{
 					address = street_address;
 				}
 
-				console.log(address);
-
 				searchAddress(address, function(geocode_address){
-					//search location to get geocoded address, 
-					//callback inserts posting into postings collection
-					var results = Postings.insert({title: title,
-							description: description,
-							phonenumber: phonenumber,
-							address: address,
-							geocode_address: {
-								"type": "Point",
-								"coordinates": [
-								geocode_address.lat,
-								geocode_address.lng
-								]
-							},
-							rentalrate: rentalrate,
-							category: category,
-							createdAt: new Date(),
-							createdBy: currentUsername,
-							postingImages: postingImages,
-							daysBooked: daysBooked = {
-								postingBookings: []
-							},
-							weekDaysDisabled: weekDaysDisabled
-					});
-					console.log(results);
-					Session.set('categorySelect', "");
-					Session.set("selected_images", null);
-					//go to posting	
-					Router.go('posting', {_id: results});
+					//search address, callback calls newPosting
+					Meteor.call('newPosting', title, description, 
+										postalcode, phonenumber, 
+										street_address, address,
+										geocode_address, rentalrate, 
+										category, postingImages,
+										bookingsArray, weekDaysDisabled,
+										checked);
 				});
 			});
-		},
-		'click .delete-image': function(){
-			event.preventDefault();
-			console.log(this);
-			console.log(parentData(1));
-			deleteImage = this;	//get image url to delete
-			deleteImage = deleteImage.valueOf(); 
-			var parentthis = Template.parentData(1); //get parent context
-			var postingImages = parentthis.postingImages; //get postingImages
-			//find item in array
-			var deleteImage_index = postingImages.indexOf(deleteImage);
-			//delete item from array
-			if(deleteImage_index != -1){
-				postingImages.splice(deleteImage_index, 1);
-			}
-			console.log(postingImages);
-			//edit saved postingImages object in database
-			//Postings.update({_id: parentthis._id}, {$set: {'postingImages': postingImages}});
 		},
 		'click .disabled-dates input': function(event){
 			//get which box was clicked from event
@@ -1589,13 +1334,8 @@ var weekDaysDisabled = [];
 						}	
 					}
 					else {
-						Rentstuff_Users.insert({
-							username: username,
-							email: email,
-							bookings: [],
-							loans: [],
-							saved_postings: []
-						});
+						Meteor.call('createRentstuffUser', username,
+									email);
 						Router.go('/');
 					}
 				});				
@@ -1637,14 +1377,8 @@ var weekDaysDisabled = [];
 						}	
 					}
 					else {
-						Rentstuff_Users.insert({
-							username: username,
-							email: email,
-							bookings: [],
-							loans: [],
-							saved_postings: [],
-							unread: []
-						});						
+						Meteor.call('createRentstuffUser', username, 
+														email);				
 						Router.go(Session.get("previousLocationPath"));
 					}
 				});
@@ -1686,25 +1420,6 @@ var weekDaysDisabled = [];
 				}
 			}
 	});
-
-/* Google Maps Geocode*/
-function searchAddress(addressInput, fn){
-	var geocoder = new google.maps.Geocoder();
-	geocoder.geocode({'address': addressInput}, function(results, status){
-		if(status == google.maps.GeocoderStatus.OK){
-			//results is an array, get first result
-			lat = results[0].geometry.location.lat();
-			lng = results[0].geometry.location.lng();
-			console.log(lat);
-			console.log(lng);
-			var latlng = {lat: lat, lng: lng};
-			fn(latlng);
-		} else{
-			//warning message
-			console.log(status);
-		}
-	});
-}
 
 function createMarker(latlng){
 	//If the user makes another search, 
@@ -1783,6 +1498,26 @@ var monthNames = ["January", "February", "March", "April", "May", "June",
 	}
 	return readableDate;
 }
+
+/* Google Maps Geocode*/
+function searchAddress(addressInput, fn){
+	var geocoder = new google.maps.Geocoder();
+	geocoder.geocode({'address': addressInput}, function(results, status){
+		if(status == google.maps.GeocoderStatus.OK){
+			//results is an array, get first result
+			lat = results[0].geometry.location.lat();
+			lng = results[0].geometry.location.lng();
+			console.log(lat);
+			console.log(lng);
+			var latlng = {lat: lat, lng: lng};
+			fn(latlng);
+		} else{
+			//warning message
+			console.log(status);
+		}
+	});
+}
+
 
 /* Image Upload*/
 
