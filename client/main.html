@@ -1,3 +1,4 @@
+
 <template name="ApplicationLayout">
 <head>
   <title>Rent stuff</title>
@@ -51,6 +52,12 @@
 
 <template name="filter">
 <div class="content-left">
+  <div class="searchbox">
+    <form>
+      <input type="text" id="searchbox" placeholder="search">
+    </form>
+    <span class='close_search'>X</span>    
+  </div>
   <form>
   <p><input type="button" id="filterstoggle" class="filterstoggle" value="filters"></p>
     <div class="filters-container">
@@ -138,28 +145,6 @@
       </div>
     </div>
 </div>
-</template>
-
-<template name="searchbox">
-<p>{{> map}}</p>
-<form>
-  <input type="text" id="search-box">
-</form>
-{{#if getPostings}}
-{{#each getPostings}}
-    <a href="{{pathFor route='posting'}}">
-    <span class="postPreview">
-    <p><img src="{{postingImages.[0]}}"></p>
-    <p>{{{title}}}</p>
-    <p>Location: {{{location}}}</p>
-    <p>{{{rentalrate}}} /day</p>
-    <p>Posted {{{timedifference}}}</p>
-    </span>
-    </a>
-{{/each}}
-{{else}}
-{{> displayPostings}}
-{{/if}}
 </template>
 
 <template name="messenger">

@@ -8,7 +8,6 @@
 	meteor add mrt:jquery-ui					add jquery-ui
 	meteor add twbs:bootstrap					for bootstrap 3
 	meteor add rajit:bootstrap3-datepicker 		for calendar
-	meteor add meteorhacks:search-source		for searchbox
 	meteor add dburles:google-maps				for maps
 	meteor add doctorpangloss:filter-collections for filters
 	meteor add ejson							extended json
@@ -41,8 +40,6 @@ var options = {
 	localSearch: true
 };
 var fields = ['title', 'description', 'location', 'rentalrate'];
-
-PostingsSearch = new SearchSource('postings', fields, options);
 
 //Maps function
 Meteor.startup(function() {
@@ -309,7 +306,7 @@ function infoWindowContent(postingId){
 	}
 	return contentString;
 }
-
+//
 	Template.filter.helpers({
 		mapOptions: function(){
 			if (GoogleMaps.loaded()){
@@ -350,42 +347,96 @@ function infoWindowContent(postingId){
 					categoriesArray = ["snow", "water", "sport",
 										"play", "utility"];
 				}
-				//get total count of results 
-				var count = Postings.find({
-					category: {$in: categoriesArray},
-					'geocode_address':
-						{$near:
-							{$geometry:
-								{type: "Point",
-									coordinates: [center.lat, 
-												center.lng]
-								},
-								$maxDistance: 50000
-							}
-						}	
-					}).count();
-				//set session
-				Session.set('resultsCount', count);
 
-				return Postings.find({
-					category: {$in: categoriesArray},
-					'geocode_address':
-						{$near:
-							{$geometry:
-								{type: "Point",
-									coordinates: [center.lat, 
-												center.lng]
-								},
-								$maxDistance: 50000
-							}
-						}	
-					},
-					{
-						sort: {createdAt: -1},
-						limit: recordsPerPage,
-						skip: skipCount
-					}
-				);					 
+				//get search value
+				search_value = Session.get('searchQuery');
+				if(search_value == null || search_value.length ==0){
+					//if search_value is null or length of 0,
+					//omit search_value from Postings.find
+
+					//get total count of results 
+					var count = Postings.find({
+						category: {$in: categoriesArray},
+						'geocode_address':
+							{$near:
+								{$geometry:
+									{type: "Point",
+										coordinates: [center.lat, 
+													center.lng]
+									},
+									$maxDistance: 50000
+								}
+							}	
+						}).count();
+					//set session
+					Session.set('resultsCount', count);
+
+					return Postings.find({
+						category: {$in: categoriesArray},
+						'geocode_address':
+							{$near:
+								{$geometry:
+									{type: "Point",
+										coordinates: [center.lat, 
+													center.lng]
+									},
+									$maxDistance: 50000
+								}
+							}	
+						},
+						{
+							sort: {createdAt: -1},
+							limit: recordsPerPage,
+							skip: skipCount
+						}
+					);
+				}
+
+				else{
+					//search for documents with search value in
+					//title or description
+
+					//get total count of results 
+					var postings_results = Postings.find({
+						$or: [{title: {$in: search_value}}, 
+								{description: {$in:search_value}}],
+						category: {$in: categoriesArray},
+						'geocode_address':
+							{$near:
+								{$geometry:
+									{type: "Point",
+										coordinates: [center.lat, 
+													center.lng]
+									},
+									$maxDistance: 50000
+								}
+							}	
+						}).count();
+					//set session
+					Session.set('resultsCount', count);
+
+					return Postings.find({
+						$or: [{title: {$in: search_value}}, 
+							{description: {$in:search_value}}],
+						category: {$in: categoriesArray},
+						'geocode_address':
+							{$near:
+								{$geometry:
+									{type: "Point",
+										coordinates: [center.lat, 
+													center.lng]
+									},
+									$maxDistance: 50000
+								}
+							}	
+						},
+						{
+							sort: {createdAt: -1},
+							limit: recordsPerPage,
+							skip: skipCount
+						}
+					);					 
+				}
 			}
 		},
 		posting_marker: function(){
@@ -473,19 +524,29 @@ var timer;
 var doLoop = false;
 
 	Template.filter.events({
-		'click .maptoggle': function(){
-			//get element from the DOM
-			map_container = $('.map-container');
-
-			if(map_container.is(":visible")){
-			//if the map was visible before click, set button to "Map"
-				$('#maptoggle').val("Map");
-			} else{
-			//if the map was hidden, set button to "Hide Map"
-				$('#maptoggle').val("Hide Map");
+		'submit .searchbox form': function(event){
+			event.preventDefault();
+			//get search_value
+			search_value = event.currentTarget.children[0].value;
+			
+			if(search_value != Session.get('searchQuery')){
+				//split search words into an aray
+				search_value = search_value.split(" ");
+				//set the session
+				Session.set('searchQuery', search_value);
+				//show X
+				$('.close_search').show(500);
+				//remove markers
+				Temporary_Markers.remove({});
 			}
-			//toggle map
-			$('.map-container').toggle();
+		},
+		'click .close_search': function(event){
+			//set searchbox to null
+			event.currentTarget.previousElementSibling[0].value = null;
+			//set searchQuery to null
+			Session.set('searchQuery', null);
+			//hide X
+			$(event.currentTarget).hide(500);
 		},
 		'click .filterstoggle': function(){
 			//get element from the DOM
@@ -614,28 +675,6 @@ var doLoop = false;
 				image.src = postingImages[0];			
 			}
 		}
-	});
-
-	Template.searchbox.helpers({
-  		getPostings: function() {
-    		return PostingsSearch.getData({
-      			transform: function(matchText, regExp) {
-        			return matchText;
-      			},
-      			sort: {isoScore: -1}
-    			});
-  		}
-	});
-
-	Template.searchbox.events({
-    	'keyup #search-box': function(event) {
-    		setTimeout(function(){
-    			//set timeout so not all keystrokes fire 
-    			//an event
-        		var text = $(event.target).val().trim();
-        		PostingsSearch.search(text);
- 			}, 100);
-    	}
 	});
 
 	Template.posting.helpers({
@@ -1184,6 +1223,8 @@ var weekDaysDisabled = [];
 										category, postingImages,
 										bookingsArray, weekDaysDisabled,
 										checked);
+					Session.set('categorySelect', "");
+					Session.set("selected_images", null);
 				});
 			});
 		},

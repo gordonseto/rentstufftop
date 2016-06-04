@@ -56,28 +56,6 @@ Cloudinary.config({
 	api_secret: 'lEYgImGmT-dQLvz5ixtGZWRfsLg'
 });
 
-//Search box
-SearchSource.defineSource('postings', function(searchText, options) {
-  var options = {sort: {createdAt: -1}};
-
-  if(searchText) {
-    var regExp = buildRegExp(searchText);
-    var selector = {title: regExp};
-
-    return Postings.find(selector, options).fetch();
-  } else {
-    return Postings.find({}, options).fetch();
-  }
-});
-
-function buildRegExp(searchText) {
-  var words = searchText.trim().split(/[ \-\:]+/);
-  var exps = _.map(words, function(word) {
-    return "(?=.*" + word + ")";
-  });
-  var fullExp = exps.join('') + ".+";
-  return new RegExp(fullExp, "i");
-}
 
 
 

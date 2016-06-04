@@ -240,8 +240,6 @@ Meteor.methods({
 									weekDaysDisabled: weekDaysDisabled
 								});
 			console.log(results);
-			Session.set('categorySelect', "");
-			Session.set("selected_images", null);
 			//go to posting	
 			Router.go('posting', {_id: results});	
  	} 	
@@ -281,4 +279,6 @@ function locationOf(element, array, start, end){
 		return locationOf(element, array, start, pivot);
 	}
 }
+
+
 

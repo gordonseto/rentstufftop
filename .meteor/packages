@@ -26,7 +26,6 @@ session
 mrt:jquery-ui
 twbs:bootstrap
 rajit:bootstrap3-datepicker
-meteorhacks:search-source
 dburles:google-maps
 doctorpangloss:filter-collections
 ejson
