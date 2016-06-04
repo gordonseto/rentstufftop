@@ -27,6 +27,6 @@ mrt:jquery-ui
 twbs:bootstrap
 rajit:bootstrap3-datepicker
 dburles:google-maps
-doctorpangloss:filter-collections
 ejson
 check
+rcy:nouislider

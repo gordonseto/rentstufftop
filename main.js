@@ -229,7 +229,7 @@ Meteor.methods({
 											geocode_address.lng
 										]
 									},
-									rentalrate: rentalrate,
+									rentalrate: parseInt(rentalrate),
 									category: category,
 									createdAt: new Date(),
 									createdBy: currentUsername,

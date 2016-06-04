@@ -9,7 +9,6 @@
 	meteor add twbs:bootstrap					for bootstrap 3
 	meteor add rajit:bootstrap3-datepicker 		for calendar
 	meteor add dburles:google-maps				for maps
-	meteor add doctorpangloss:filter-collections for filters
 	meteor add ejson							extended json
 	meteor add check 							for checking
 */	
@@ -202,6 +201,9 @@ const GREEN_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&c
 	Template.filter.onCreated(function() {
 		//Set filters table to null
 		Session.set('categoryFilter', null);
+		//Set prince range filter
+		Session.set('priceRange', ["0", "200"]);
+
   		// We can use the `ready` callback to interact with the map API once the map is ready.
   		GoogleMaps.ready('map', function(map) {
     		// Add markers to the map once it's ready from
@@ -306,7 +308,23 @@ function infoWindowContent(postingId){
 	}
 	return contentString;
 }
-//
+
+	Template.filter.rendered = function(){
+		this.$('#slider-handles').noUiSlider({
+			start: [0, 200],
+			range: {
+				'min': [0, 1],
+				'40%': [20, 1],
+				'85%': [100, 1],
+				'max': [200, 1]
+			},
+			connect: true,
+			format: wNumb({
+				decimals: 0
+			})
+		});
+	}
+
 	Template.filter.helpers({
 		mapOptions: function(){
 			if (GoogleMaps.loaded()){
@@ -350,94 +368,63 @@ function infoWindowContent(postingId){
 
 				//get search value
 				search_value = Session.get('searchQuery');
-				if(search_value == null || search_value.length ==0){
-					//if search_value is null or length of 0,
-					//omit search_value from Postings.find
-
-					//get total count of results 
-					var count = Postings.find({
-						category: {$in: categoriesArray},
-						'geocode_address':
-							{$near:
-								{$geometry:
-									{type: "Point",
-										coordinates: [center.lat, 
-													center.lng]
-									},
-									$maxDistance: 50000
-								}
-							}	
-						}).count();
-					//set session
-					Session.set('resultsCount', count);
-
-					return Postings.find({
-						category: {$in: categoriesArray},
-						'geocode_address':
-							{$near:
-								{$geometry:
-									{type: "Point",
-										coordinates: [center.lat, 
-													center.lng]
-									},
-									$maxDistance: 50000
-								}
-							}	
-						},
-						{
-							sort: {createdAt: -1},
-							limit: recordsPerPage,
-							skip: skipCount
-						}
-					);
+				if(search_value == null){
+					//if no search value, retrieve all documents
+					search_value = [""];
 				}
 
-				else{
-					//search for documents with search value in
-					//title or description
+				//get price range
+				var price_range = Session.get('priceRange');
+				var lowerBound = parseInt(price_range[0]);
+				var upperBound = parseInt(price_range[1]);
 
-					//get total count of results 
-					var postings_results = Postings.find({
-						$or: [{title: {$in: search_value}}, 
-								{description: {$in:search_value}}],
-						category: {$in: categoriesArray},
-						'geocode_address':
-							{$near:
-								{$geometry:
-									{type: "Point",
-										coordinates: [center.lat, 
-													center.lng]
-									},
-									$maxDistance: 50000
-								}
-							}	
-						}).count();
-					//set session
-					Session.set('resultsCount', count);
+				//search for documents with search value in
+				//title or description
 
-					return Postings.find({
-						$or: [{title: {$in: search_value}}, 
+				//get total count of results 
+				var count = Postings.find({
+					$or: [{title: {$in: search_value}}, 
 							{description: {$in:search_value}}],
-						category: {$in: categoriesArray},
-						'geocode_address':
-							{$near:
-								{$geometry:
-									{type: "Point",
-										coordinates: [center.lat, 
-													center.lng]
-									},
-									$maxDistance: 50000
-								}
-							}	
-						},
-						{
-							sort: {createdAt: -1},
-							limit: recordsPerPage,
-							skip: skipCount
-						}
-					);					 
-				}
+					rentalrate: {$gte: lowerBound, $lte: upperBound},
+					category: {$in: categoriesArray},
+					'geocode_address':
+						{$near:
+							{$geometry:
+								{type: "Point",
+									coordinates: [center.lat, 
+												center.lng]
+								},
+								$maxDistance: 50000
+							}
+						}	
+					}).count();
+				//set session
+				Session.set('resultsCount', count);
+
+				return Postings.find({
+					$or: [{title: {$in: search_value}}, 
+						{description: {$in:search_value}}],
+					rentalrate: {$gte: lowerBound, $lte: upperBound},
+					category: {$in: categoriesArray},
+					'geocode_address':
+						{$near:
+							{$geometry:
+								{type: "Point",
+									coordinates: [center.lat, 
+												center.lng]
+								},
+								$maxDistance: 50000
+							}
+						}	
+					},
+					{
+						sort: {createdAt: -1},
+						limit: recordsPerPage,
+						skip: skipCount
+					}
+				);					 
 			}
+
 		},
 		posting_marker: function(){
 			//Insert marker into collection
@@ -517,6 +504,9 @@ function infoWindowContent(postingId){
 			else{
 				return '';
 			}
+		},
+		search_value: function(){
+			return Session.get('searchQuery');
 		}
 	});
 
@@ -524,6 +514,36 @@ var timer;
 var doLoop = false;
 
 	Template.filter.events({
+		'change #slider-handles': function(event){
+			//get handle values
+			var values = event.currentTarget.vGet();
+			var lowerHandle = values[0];
+			var upperHandle = values[1];
+			//set input values to corresponding handles
+			$('#lower-handle').val(lowerHandle);
+			$('#upper-handle').val(upperHandle);
+
+			//set session variable
+			Session.set('priceRange', values);
+			Temporary_Markers.remove({});
+		},
+		'keyup .slider_container form': function(event){
+			if(event.keyCode == '13'){
+				//if enter is pressed
+				var values = [];
+				//get lower and upper input values
+				values[0] = $('#lower-handle').val();
+				values[1] = $('#upper-handle').val();
+				//check if valid range
+				if(parseInt(values[1]) > parseInt(values[0])){
+					//set slider to values
+					event.currentTarget.previousElementSibling.vSet(values);
+					//set session variable
+					Session.set('priceRange', values);
+					Temporary_Markers.remove({});
+				}
+			}
+		},
 		'submit .searchbox form': function(event){
 			event.preventDefault();
 			//get search_value
@@ -548,13 +568,14 @@ var doLoop = false;
 			//hide X
 			$(event.currentTarget).hide(500);
 		},
-		'click .filterstoggle': function(){
+		'click .filterstoggle': function(event){
 			//get element from the DOM
 			filters_container = $('.filters-container');
 			
 			if(filters_container.is(":visible")){
 				//if filter was visible before click, slide up
 				filters_container.slideUp(300);
+				//if a category was set, remove the category
 				if(Session.get('categoryFilter')){
 					//remove markers from map
 					Temporary_Markers.remove({});

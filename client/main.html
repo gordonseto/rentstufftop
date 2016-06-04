@@ -54,7 +54,7 @@
 <div class="content-left">
   <div class="searchbox">
     <form>
-      <input type="text" id="searchbox" placeholder="search">
+      <input type="text" id="searchbox" placeholder="search" value="{{search_value}}">
     </form>
     <span class='close_search'>X</span>    
   </div>
@@ -85,6 +85,19 @@
       </tr>
       </tbody>
       </table>
+      <div class="slider_container">
+        <div class="custom_bold">price range</div>
+        <br>
+        <div id="slider-handles"></div>
+        <form>
+          <span class="lower-handle">
+            $<input type="text" id="lower-handle" value="0">
+          </span>
+          <span class="upper-handle">
+            $<input type="text" id="upper-handle" value="200">
+          </span>
+          </form>
+      </div>  
     </div>
   </form>
   <div>
