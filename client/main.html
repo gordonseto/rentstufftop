@@ -52,6 +52,16 @@
 
 <template name="filter">
 <div class="content-left">
+  <div class="dropdown">
+    <button class="btn dropdown-toggle" type="button" data-toggle="dropdown"><span class="custom_bold">sort</span>
+    <span class="caret"></span></button>
+    <ul class="dropdown-menu dropdown-menu-right" id="sort_menu">
+    <li><a id="most-recent">most recent</a></li>
+    <li><a id="lowest-price">lowest price</a></li>
+    <li><a id="highest-price">highest price</a></li>
+    {{sort_type_bold}}
+    </ul>
+  </div>
   <div class="searchbox">
     <form>
       <input type="text" id="searchbox" placeholder="search" value="{{search_value}}">

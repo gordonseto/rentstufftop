@@ -323,6 +323,10 @@ function infoWindowContent(postingId){
 				decimals: 0
 			})
 		});
+
+		//set default sort to "most-recent"
+		Session.set('sortType', "most-recent");
+		$('#most-recent').css("fontWeight", "bold");
 	}
 
 	Template.filter.helpers({
@@ -401,6 +405,27 @@ function infoWindowContent(postingId){
 				//set session
 				Session.set('resultsCount', count);
 
+				var sort = {};
+				//get sort_type from session variable
+				var sort_type = Session.get('sortType');
+				if(sort_type == null){
+					//default is "most recent"
+					sort_type = "most-recent";
+				}
+
+				if(sort_type == "most-recent"){
+					sort = {};
+					sort['createdAt'] = -1;
+				}
+				else if(sort_type == "lowest-price"){
+					sort = {};
+					sort['rentalrate'] = 1;
+				}
+				else {
+					sort = {};
+					sort['rentalrate'] = -1;
+				}
+
 				return Postings.find({
 					$or: [{title: {$in: search_value}}, 
 						{description: {$in:search_value}}],
@@ -418,7 +443,7 @@ function infoWindowContent(postingId){
 						}	
 					},
 					{
-						sort: {createdAt: -1},
+						sort: sort,
 						limit: recordsPerPage,
 						skip: skipCount
 					}
@@ -514,6 +539,13 @@ var timer;
 var doLoop = false;
 
 	Template.filter.events({
+		'click .dropdown-menu a': function(event){
+			var previous_sort = Session.get('sortType');
+			$('#'+previous_sort).css("fontWeight", ""); 
+			var sort_type = event.currentTarget.id;
+			Session.set('sortType', sort_type);
+			event.currentTarget.style.fontWeight = "bold";
+		},
 		'change #slider-handles': function(event){
 			//get handle values
 			var values = event.currentTarget.vGet();
