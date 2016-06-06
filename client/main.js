@@ -161,18 +161,15 @@ Meteor.users.find({"status.online": true}).observe({
 
 	function getLocation(id){
 		if(navigator.geolocation){
-			//get current position callback function
-			navigator.geolocation.getCurrentPosition(function(position){
-				//get near postings to user's location
+			//watch geolocation
+			navigator.geolocation.watchPosition(function(position){
+				//get postings near user
 				var postingsArray = findNearPostings(position, id);
-				//call updatePostingsAvailability method, update
-				//availability status of those postings
+				//remove markers for those postings
+				Temporary_Markers.remove({postingId: {$in: postingsArray}});
+				//update their availability
 				Meteor.call('updatePostingsAvailability', postingsArray, id.username);
 			}, showError);
-			navigator.geolocation.watchPosition(function(position){
-				var postingsArray = findNearPostings(position, id);
-				Meteor.call('updatePostingsAvailability', postingsArray, id.username);
-			})
 		} else{
 			console.log("Geolocation is off");
 		}
@@ -202,7 +199,7 @@ Meteor.users.find({"status.online": true}).observe({
 									{type: "Point",
 										coordinates: coordinates
 									},
-									$maxDistance: 500
+									$maxDistance: 1000
 								}
 							}	
 						});
@@ -355,6 +352,18 @@ const AVAILABLE_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_lett
 
 function infoWindowContent(postingId){
 	posting = Postings.findOne({_id: postingId});
+
+	var availability_string;
+
+	if(posting.availability){
+		var availability_string = 
+					'<div class="map_preview_availability">'+
+					'available right now'+
+					'</div>'
+	}
+	else{
+		availability_string = "";
+	}
 	if(posting.postingImages[0]){	//check if image
 	contentString = '<div class="posting_container">'+
 					'<a href="/posting/'+posting._id+'">'+
@@ -362,6 +371,7 @@ function infoWindowContent(postingId){
 					'<div class="map_posting_image">'+
 					'<img src="'+posting.postingImages[0]+'">'+
 					'</div>'+
+					availability_string+
 					'<div class="map_posting_title">'+posting.title+'</div>'+
 					'<div class="map_posting_rate">$'+posting.rentalrate+' /day</div>'+
 					'</span>'+
@@ -374,6 +384,7 @@ function infoWindowContent(postingId){
 					'<div class="map_posting_image">'+
 					'<img>'+
 					'</div>'+
+					availability_string+				
 					'<div class="map_posting_title">'+posting.title+'</div>'+
 					'<div class="map_posting_rate">$'+posting.rentalrate+' /day</div>'+					'</span>'+
 					'</a>'+
@@ -400,6 +411,8 @@ function infoWindowContent(postingId){
 		//set default sort to "most-recent"
 		Session.set('sortType', "most-recent");
 		$('#most-recent').css("fontWeight", "bold");
+		//set checkAvaiability to "false"
+		Session.set('Availabilitycheckbox', false);
 	}
 
 	Template.filter.helpers({
@@ -455,6 +468,19 @@ function infoWindowContent(postingId){
 				var lowerBound = parseInt(price_range[0]);
 				var upperBound = parseInt(price_range[1]);
 
+				//get if availability box is checked
+				var availabilityArray;
+				var checked = Session.get('availabilityCheckbox');
+				//get checked value
+				if(checked){
+					//if true, only find postings with availability true
+					availabilityArray = [checked];
+				}
+				else{
+					//if false, find postings with availability either true or false
+					availabilityArray = [true, false];
+				}
+
 				//search for documents with search value in
 				//title or description
 
@@ -463,6 +489,7 @@ function infoWindowContent(postingId){
 					$or: [{title: {$in: search_value}}, 
 							{description: {$in:search_value}}],
 					rentalrate: {$gte: lowerBound, $lte: upperBound},
+					availability: {$in: availabilityArray},
 					category: {$in: categoriesArray},
 					'geocode_address':
 						{$near:
@@ -503,6 +530,7 @@ function infoWindowContent(postingId){
 					$or: [{title: {$in: search_value}}, 
 						{description: {$in:search_value}}],
 					rentalrate: {$gte: lowerBound, $lte: upperBound},
+					availability: {$in: availabilityArray},
 					category: {$in: categoriesArray},
 					'geocode_address':
 						{$near:
@@ -653,6 +681,11 @@ var doLoop = false;
 				}
 			}
 		},
+		'change #availability_checkbox': function(event){
+			Temporary_Markers.remove({});
+			var checked = event.currentTarget.checked;
+			Session.set('availabilityCheckbox', checked);
+		},
 		'submit .searchbox form': function(event){
 			event.preventDefault();
 			//get search_value
@@ -687,11 +720,19 @@ var doLoop = false;
 				//if a category was set, remove the category
 				if(Session.get('categoryFilter')){
 					//remove markers from map
-					Temporary_Markers.remove({});
+					Temporary_Markers.remove({});					
 					//set category filter to null
 					Session.set('categoryFilter', null);
 				}
-				//change button value
+				if(Session.get('availabilityCheckbox')){
+					//remove markers from map
+					Temporary_Markers.remove({});
+					//set checkAvailability to false
+					Session.set('availabilityCheckbox', false);
+					//uncheck checkbox
+					$('#availability_checkbox').attr('checked', false);
+					//change button value
+				}
 				$('#filterstoggle').val("filters");
 				//unbold text
 				listelement = $('td');

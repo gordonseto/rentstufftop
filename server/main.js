@@ -29,7 +29,7 @@ Meteor.publish('theConversations', function(){
   }
 });
 Meteor.publish("userStatus", function() {
-  return Meteor.users.find({ "status.online": true });
+  return Meteor.users.find({_id: this.userId, "status.online": true });
 });
 
 //Publish messages

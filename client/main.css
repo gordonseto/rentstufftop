@@ -311,6 +311,11 @@ a, a:hover, a:active, a:visited {
   position: relative;
 }
 
+.availability_filter{
+	margin-top: -3%;
+	margin-left: 40%;
+}
+
 .postPreview{
 	margin-right: 20px;
 	margin-left: 15px;
@@ -356,6 +361,23 @@ a, a:hover, a:active, a:visited {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.posting_preview_availability {
+	float: right;
+	font-size: 12px;
+	padding: 0px 3px 0px 3px;
+	border: 2px solid #4A118F;
+	border-radius: 4px;
+	margin-top: -23px;
+	margin-left: 101px;
+	background: white;
+	z-index: 100;
+	position: absolute;
+	color: #4A118F;
+	text-shadow: none;
+	opacity: 0.75;
+	font-weight: bold;
 }
 
 .pageNav {
@@ -458,6 +480,23 @@ a, a:hover, a:active, a:visited {
 	background-color: #EDEDED;
 	width: 176px;
 	height: 235.2px;
+}
+
+.map_preview_availability {
+	float: right;
+	font-size: 10px;
+	padding: 0px 3px 0px 3px;
+	border: 2px solid #4A118F;
+	border-radius: 4px;
+	margin-top: -21px;
+	margin-left: 80px;
+	background: white;
+	z-index: 100;
+	position: absolute;
+	color: #4A118F;
+	text-shadow: none;
+	opacity: 0.75;
+	font-weight: bold;
 }
 
 .map_posting_time {

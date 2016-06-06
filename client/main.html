@@ -109,8 +109,11 @@
           <span class="upper-handle">
             $<input type="text" id="upper-handle" value="200">
           </span>
-          </form>
-      </div>  
+        </form>
+      </div> 
+      <div class="availability_filter">
+        <input type="checkbox" id="availability_checkbox"><span class="custom_bold"> available right now</span>
+      </div> 
     </div>
   </form>
   <div>
@@ -121,6 +124,11 @@
         <div class="posting_image">
           <img src="{{postingImages.[0]}}">
         </div>
+        {{#if availability}}
+          <div class="posting_preview_availability">
+            available right now
+          </div>
+        {{/if}}
         <div class="posting_preview_title"><div class="custom_bold">{{title}}</div></div>
         <div class="posting_preview_rate">${{rentalrate}} /day</div>
         <div class="posting_preview_time">{{timedifference}}</div>
