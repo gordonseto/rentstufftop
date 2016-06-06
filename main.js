@@ -252,7 +252,28 @@ Meteor.methods({
 								loans: [],
 								saved_postings: []
 							});
-  }
+  },
+  'updatePostingsAvailability': function(postingsArray, username){
+  		if(Meteor.user()){
+  			//set all postings by user's availability to false
+  			console.log(Postings.update({createdBy: username},
+  										{$set: {availability: false}},
+  										{multi:true}));
+ 			console.log(postingsArray);
+ 			//update postings in postingsArray availability to true
+ 			console.log(Postings.update({_id: {$in: postingsArray}},
+ 								{$set: {availability: true}},
+ 								{multi: true}));
+		}			
+  	},
+  	'userLoggedOut': function(username){
+  		console.log(username);
+  		console.log(
+  		Postings.update({createdBy: username},
+  						{$set: {availability: false}},
+  						{multi: true})
+  		);
+  	}
 });
 
 /*Insert Function for profile loanings*/

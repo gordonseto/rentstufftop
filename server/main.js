@@ -28,6 +28,10 @@ Meteor.publish('theConversations', function(){
                              ]});
   }
 });
+Meteor.publish("userStatus", function() {
+  return Meteor.users.find({ "status.online": true });
+});
+
 //Publish messages
 Meteor.publish('theMessages', function(){
   //get username
@@ -56,6 +60,13 @@ Cloudinary.config({
 	api_secret: 'lEYgImGmT-dQLvz5ixtGZWRfsLg'
 });
 
+Meteor.users.find({"status.online": true}).observe({
+  removed: function(id){
+    console.log('hi');
+    console.log(id.username);
+    Meteor.call('userLoggedOut', id.username);
+  }
+});
 
 
 

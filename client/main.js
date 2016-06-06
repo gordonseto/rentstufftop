@@ -11,6 +11,8 @@
 	meteor add dburles:google-maps				for maps
 	meteor add ejson							extended json
 	meteor add check 							for checking
+	meteor add mizzao:user-status				for users online/offline
+	meteor add mizzao:timesync					used with user-status
 */	
 
 
@@ -30,6 +32,8 @@ Meteor.subscribe('theUsers');
 Meteor.subscribe('theMessages');
 //subscribe to Conversations
 Meteor.subscribe('theConversations');
+//subscribe to user status
+Meteor.subscribe('userStatus');
 
 const recordsPerPage = 12;
 
@@ -144,6 +148,71 @@ Router.route('/messages', {
 	template: 'messenger'
 });
 
+Meteor.users.find({"status.online": true}).observe({
+	added: function(id){
+		//get users location
+		getLocation(id);
+	},
+	removed: function(id){
+		console.log(id);
+		Meteor.call('userLoggedOut', id.username);
+	}
+});
+
+	function getLocation(id){
+		if(navigator.geolocation){
+			//get current position callback function
+			navigator.geolocation.getCurrentPosition(function(position){
+				//get near postings to user's location
+				var postingsArray = findNearPostings(position, id);
+				//call updatePostingsAvailability method, update
+				//availability status of those postings
+				Meteor.call('updatePostingsAvailability', postingsArray, id.username);
+			}, showError);
+			navigator.geolocation.watchPosition(function(position){
+				var postingsArray = findNearPostings(position, id);
+				Meteor.call('updatePostingsAvailability', postingsArray, id.username);
+			})
+		} else{
+			console.log("Geolocation is off");
+		}
+	}
+
+	function showError(error){
+   		console.log(error);
+	}
+
+	function findNearPostings(position, id){
+		console.log(position);
+		console.log(id);
+		var coordinates = [];
+		//get coordinates
+		coordinates[0] = position.coords.latitude;
+		coordinates[1] = position.coords.longitude;
+  		//get current username
+  		var currentUsername = id.username;
+  		console.log(currentUsername);
+  		console.log(coordinates);
+  		//find postings created by user $near coordinates user
+  		//is located at
+ 		postings = Postings.find({createdBy: currentUsername,
+							'geocode_address':
+							{$near:
+								{$geometry:
+									{type: "Point",
+										coordinates: coordinates
+									},
+									$maxDistance: 500
+								}
+							}	
+						});
+ 			//map posting _ids into an array
+ 			var postingsArray = postings.fetch().map(function(obj){
+ 				return obj._id;
+ 			});
+ 			return postingsArray;
+	}
+
 	Template.navigation.helpers({
 		'loggedinUser': function(){
 			//shows users username on navigation bar
@@ -151,6 +220,9 @@ Router.route('/messages', {
 		},
 		city: function(){
 			return Session.get('locationFilter');
+		},
+		'getPosition': function(){
+			return Session.get('currentPosition');
 		}
 	});
 
@@ -195,8 +267,9 @@ Router.route('/messages', {
 		}
 	});
 
-const DEFAULT_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|FE7569' 
+const DEFAULT_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|FE7569'; 
 const GREEN_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|009999';
+const AVAILABLE_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|A07CCC';
 
 	Template.filter.onCreated(function() {
 		//Set filters table to null
@@ -256,7 +329,7 @@ const GREEN_MARKER = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&c
   					});
   					//change colour back when mouseout
   					google.maps.event.addListener(marker, 'mouseout', function(){
-  						marker.setIcon(DEFAULT_MARKER);
+  						marker.setIcon(document.color);
   					})
 
     				markers[document._id] = marker;
@@ -455,11 +528,15 @@ function infoWindowContent(postingId){
 			//Insert marker into collection
 			if(this.geocode_address){
 				if(this.geocode_address.coordinates){
-				postingId = this._id;
-				Temporary_Markers.insert({lat: this.geocode_address.coordinates[0], 
+					var color = DEFAULT_MARKER;
+					postingId = this._id;
+					if(this.availability){
+						var color = AVAILABLE_MARKER;
+					}
+					Temporary_Markers.insert({lat: this.geocode_address.coordinates[0], 
 									lng: this.geocode_address.coordinates[1], 
 									postingId: postingId,
-									color: DEFAULT_MARKER});    				
+									color: color});    				
     				}
     			}
     	},
@@ -638,7 +715,11 @@ var doLoop = false;
 		},
 		//mouseleave, change color back to default
 		'mouseleave .posting_container': function(event, template){
-			Temporary_Markers.update({postingId: this._id}, {$set: {color: DEFAULT_MARKER}});
+			var color = DEFAULT_MARKER;
+			if(this.availability){
+				color = AVAILABLE_MARKER;
+			}
+			Temporary_Markers.update({postingId: this._id}, {$set: {color: color}});
 		}, 
 		//filters table events
 		'click #filters_table td': function(event){

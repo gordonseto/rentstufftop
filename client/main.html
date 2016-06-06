@@ -12,6 +12,14 @@
   <div class="hometitle">
     <a href="{{pathFor route='home'}}"><h2>rentstuff</h2></a>
   </div>
+  <div class="location_search">
+    <form>
+      <p><span class="glyphicon glyphicon-search" aria-hidden="true"></span><input id="location" type="text" placeholder="city" value="{{city}}"/></p>
+    </form>
+  </div>
+    {{#with getPosition}}
+      <p>{{this.[0]}}, {{this.[1]}}</p>
+    {{/with}}
   <div class="navigation_links">
     <h5>
     <a href="{{pathFor route='newPosting'}}" id="lend">+ lend</a>
@@ -25,11 +33,6 @@
     {{/if}}
     </h5>
   </div>
-</div>
-<div class="location_search">
-  <form>
-  <p><span class="glyphicon glyphicon-search" aria-hidden="true"></span><input id="location" type="text" placeholder="city" value="{{city}}"/></p>
-  </form>
 </div>
 </template>
 
@@ -52,6 +55,15 @@
 
 <template name="filter">
 <div class="content-left">
+  <div class="searchbox">
+    <form>
+      <input type="text" id="searchbox" placeholder="search" value="{{search_value}}">
+    </form>
+    <span class='close_search'>X</span>    
+  </div>
+  <br>
+  <form>
+  <input type="button" id="filterstoggle" class="filterstoggle" value="filters">
   <div class="dropdown">
     <button class="btn dropdown-toggle" type="button" data-toggle="dropdown"><span class="custom_bold">sort</span>
     <span class="caret"></span></button>
@@ -59,17 +71,8 @@
     <li><a id="most-recent">most recent</a></li>
     <li><a id="lowest-price">lowest price</a></li>
     <li><a id="highest-price">highest price</a></li>
-    {{sort_type_bold}}
     </ul>
   </div>
-  <div class="searchbox">
-    <form>
-      <input type="text" id="searchbox" placeholder="search" value="{{search_value}}">
-    </form>
-    <span class='close_search'>X</span>    
-  </div>
-  <form>
-  <p><input type="button" id="filterstoggle" class="filterstoggle" value="filters"></p>
     <div class="filters-container">
       <table id="filters_table">
       <thead>
