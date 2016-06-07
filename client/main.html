@@ -467,6 +467,7 @@
 
 <template name="confirm">
 <p>You have selected to rent <strong>{{#with posting}}<a href="{{pathFor route='posting'}}">{{title}}</a>{{/with}}</strong> for {{daysBooked}}.</p>
+<a id="confirm_stripe" href="#" class="stripe-connect light-blue"><span>Connect with Stripe</span></a>
 <form>
     <div class="col-xs-4">
       <div class="form-group">

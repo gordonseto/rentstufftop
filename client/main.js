@@ -13,6 +13,9 @@
 	meteor add check 							for checking
 	meteor add mizzao:user-status				for users online/offline
 	meteor add mizzao:timesync					used with user-status
+	meteor add mrgalaxy:stripe					for stripejs
+	meteor add momentjs:moment					for dates
+	meteor add random
 */	
 
 
@@ -1228,6 +1231,21 @@ function getMessageTime(messageDate){
 			Meteor.call('confirmBooking', postingId, addedDays);
 		
 			Router.go('success');
+		},
+		'click #confirm_stripe': function(){
+			event.preventDefault();
+			StripeCheckout.open({
+				key: Meteor.settings.public.stripe.testPublishableKey,
+				amount: 2000,
+				name: 'test',
+				panelLabel: 'Pay Now',
+				token: function(res){
+					stripeToken = res.id;
+					console.info(res);
+					console.log(stripeToken);
+					Meteor.call('chargeCard', stripeToken);
+				}
+			})
 		}
 	});
 
