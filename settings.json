@@ -3,7 +3,13 @@
 		"recordsPerPage" : "8",
 		"stripe" : {
 			"testPublishableKey": "pk_test_JxIZcxB9KqsgguekcmfjEdqk",
-			"livePublishableKey": "pk_live_2hS8mMxFIrLfYSRybK0YzcNP"
+			"livePublishableKey": "pk_live_2hS8mMxFIrLfYSRybK0YzcNP",
+			"client_id": "ca_8b3MaajqJ7O5eXllXncUuOsS9OtQwvXc"
+		}
+	},
+	"private": {
+		"stripe":{
+			"testSecretKey": "sk_test_5Cg3kbUtKxaCDe8FejmZtWy2"
 		}
 	}
 }

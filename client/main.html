@@ -25,7 +25,7 @@
     <a href="{{pathFor route='newPosting'}}" id="lend">+ lend</a>
     {{#if currentUser}}
       <a href="{{pathFor route='messenger'}}">Messages</a>
-      <a href="/profile/{{loggedinUser}}">{{loggedinUser}}</a>
+      <a href="{{pathFor route='account'}}">{{loggedinUser}}</a>
       <a href="#" class="logout">logout</a>
     {{else}}
       <a href="{{pathFor route='login'}}">login</a>
@@ -475,6 +475,27 @@
       </div>
   </div>
 </form>
+</template>
+
+<template name="account">
+  <div class="account_container">
+    {{#with userDetails}}
+    <div class="user_container">
+      <div class="profile_image"></div>
+        <input type="file" accept="image/*" id="profile_upload">
+          <label for="profile_upload" id="profile_upload_label"><span class="glyphicon glyphicon-camera" aria-hidden="true"></span> Add Profile Picture</label>
+      <h5>{{username}}</h5>
+    </div>
+    <div class="upcoming_activity_container">
+      <div class="upcoming_bookings">
+        <h4>Upcoming bookings</h4>
+      </div>
+      <div class="upcoming_loans">
+        <h4>Upcoming loans</h4>
+      </div>
+    </div>
+    {{/with}}
+  </div>
 </template>
 
 <template name="profile">

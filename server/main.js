@@ -68,6 +68,22 @@ Meteor.users.find({"status.online": true}).observe({
   }
 });
 
+Meteor.methods({
+  'chargeCard': function(stripeToken){
+    var stripe = StripeAPI("sk_test_5Cg3kbUtKxaCDe8FejmZtWy2");
+    var charge = stripe.charges.create({
+      amount: 2000,
+      currency: "cad",
+      source: stripeToken,
+      description: "example charge"
+    }, function(error, charge){
+      if(error & error.type === "StripeCardError"){
+        console.log(error);
+      }
+    });
+  }
+});
+
 
 
 

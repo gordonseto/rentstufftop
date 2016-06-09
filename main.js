@@ -162,6 +162,12 @@ Meteor.methods({
 			//get current loans array
 			loansArray = postingOwner.loans;
 			console.log(loansArray);
+			//get account borrowing
+			var currentUser = Rentstuff_Users.findOne({username: currentUsername});
+			console.log(currentUser);
+			//get current borrows array
+			var bookingsArray = currentUser.bookings;
+			console.log(bookingsArray);
 			//loop through number of days booked
 			for(i = 0; i < addedDays.length; i++){
 				//make new object "newBooking" with username and addedDays
@@ -172,34 +178,17 @@ Meteor.methods({
 				//insert newBooking into posting owner's loansArray
 				loansArray = insert(newBooking, loansArray);
 				console.log(loansArray);
+				//insert newBooking into borrower's bookingsArray
+				bookingsArray = insert(newBooking, bookingsArray);
+				console.log(bookingsArray);
 			}	//update postingBookings in the database
 			Postings.update({_id: postingId}, {$set:{daysBooked: {postingBookings: newBookingsArray}}});
 			//update posting owner's loans array
 			console.log(postingOwner._id);
 			Rentstuff_Users.update({_id: postingOwner._id}, {$set:{loans: loansArray}})
-			//Update account booking
-			//meteor username is same as Rentstuff_Users username
-			currentUser = Rentstuff_Users.findOne({username: currentUsername});
-			console.log(currentUser);
-			//get current bookings from user profile
-			current_bookings = currentUser.bookings;
-			console.log(current_bookings);
-			//create object to add to array
-			var bookingObj = {postingId: postingId, 
-								days: addedDays}
-			console.log(bookingObj);
-			//check if posting has already been saved
-			var check = current_bookings.indexOf(bookingObj);
-			if(check != -1){
-				return;
-			} else{			
-				//else push this bookingObj onto array
-				current_bookings.push(bookingObj);
-				console.log(current_bookings);
-				//save new array into rentstuff_users profile
-				Rentstuff_Users.update({_id: currentUser._id}, 
-				{$set:{bookings: current_bookings}});
-			}	
+			//update borrower's bookings array
+			Rentstuff_Users.update({_id: currentUser._id}, 
+			{$set:{bookings: bookingsArray}});
 		}
   	}
   },

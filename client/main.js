@@ -151,6 +151,11 @@ Router.route('/messages', {
 	template: 'messenger'
 });
 
+Router.route('/account',{
+	name: 'account',
+	template: 'account'
+});
+
 Meteor.users.find({"status.online": true}).observe({
 	added: function(id){
 		//get users location
@@ -1246,6 +1251,26 @@ function getMessageTime(messageDate){
 					Meteor.call('chargeCard', stripeToken);
 				}
 			})
+		}
+	});
+
+	Template.account.helpers({
+		'posting': function(){
+			profileOwner = this.username;
+			return Postings.find({createdBy: profileOwner},
+								{sort: {createdAt: -1}});
+		},
+		'timedifference': function(){
+			postedDate = this.createdAt;
+			currentDate = new Date();
+
+			return getTimeDifference(postedDate, currentDate);
+		},
+		'userDetails': function(){
+			if(Meteor.user()){
+			var currentUser = Meteor.user().username;
+				return Rentstuff_Users.findOne({username: currentUser});
+			}
 		}
 	});
 
